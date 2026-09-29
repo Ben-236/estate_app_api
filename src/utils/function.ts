@@ -6,7 +6,7 @@ import { v4 as uuid } from "uuid";
 
 interface AccessTokenPayload {
   id: string;
-  userType: "ADMIN" | "STAFF" | "PATIENT";
+  userType: "ADMIN" | "STAFF" | "USER";
   roleId?: string | null;
 }
 
@@ -41,7 +41,6 @@ export function generateRefreshToken(): string {
     .digest("hex");
 
 }
-
 
 
 export function exclude<T extends Record<string, any>, K extends keyof T>(user: T, keys: K[]): Omit<T, K> {
