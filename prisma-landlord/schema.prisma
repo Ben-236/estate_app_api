@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/landlord"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id           String  @id @default(uuid())
+  fullName     String
+  email        String? @unique
+  phoneNumber  String? @unique
+  password     String
+  profileImage String?
+  occupation   String?
+  homeAddress  String?
+
+  isVerified Boolean @default(false)
+  isActive   Boolean @default(true)
+  isDeleted  Boolean @default(false)
+
+  memberships  EstateMembership[]
+  joinRequests EstateJoinRequest[]
+  emailVerifications EmailVerification[]
+  
+
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+ 
+}
+
+model EmailVerification {
+  id         String    @id @default(uuid())
+  userId     String
+  otpHash    String
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Estate {
+  id          String  @id @default(uuid())
+  name        String
+  email       String
+  phoneNumber String?
+  address     String
+  orgCode     String  @unique
+
+  dbName String
+  dbUrl  String
+
+  status EstateStatus @default(PROVISIONING)
+
+  memberships  EstateMembership[]
+  joinRequests EstateJoinRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EstateMembership {
+  id       String           @id @default(uuid())
+  userId   String
+  estateId String
+  status   MembershipStatus @default(ACTIVE)
+
+  user   User   @relation(fields: [userId], references: [id])
+  estate Estate @relation(fields: [estateId], references: [id])
+
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, estateId])
+}
+
+model EstateJoinRequest {
+  id       String            @id @default(uuid())
+  userId   String
+  estateId String
+  notes    String?
+  status   JoinRequestStatus @default(PENDING)
+
+  reviewedAt DateTime?
+  reviewedBy String?
+
+  user   User   @relation(fields: [userId], references: [id])
+  estate Estate @relation(fields: [estateId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, estateId])
+}
+
+enum EstateStatus {
+  PROVISIONING
+  ACTIVE
+  SUSPENDED
+  FAILED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+  LEFT
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
