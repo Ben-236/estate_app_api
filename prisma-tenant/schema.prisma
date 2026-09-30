@@ -6,3 +6,78 @@ generator client {
 datasource db {
   provider = "mysql"
 }
+
+
+
+model Guest {
+  id          String  @id @default(uuid())
+  fullName    String
+  email       String? @unique
+  phoneNumber String  @unique
+
+  numberOfVisitor Int?
+  description     String?
+
+  checkInDate  DateTime?
+  checkOutDate DateTime?
+
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+
+  guestCode Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Staff {
+  id          String  @id @default(uuid())
+  fullName    String
+  email       String? @unique
+  phoneNumber String? @unique
+
+  numberOfVisitor Int?
+  description     String?
+
+  checkInDate  DateTime?
+  checkOutDate DateTime?
+
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+
+  staffCode   Int?
+  allowedDays DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RepairRequest {
+id          String  @id @default(uuid())
+requestDate DateTime?
+issueType    RepairIssueType    
+maintainer   String? 
+status       RepairRequestStatus @default(PENDING)
+
+issueDocument String?
+notes         String?
+
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+}
+
+
+enum RepairRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum RepairIssueType {
+  CLEANING
+  REPAIR
+  OTHER
+}

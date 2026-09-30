@@ -2,6 +2,10 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import "dotenv/config";
+import authRouter from "./routes/authRoutes";
+// import landlordRouter from "./routes/landlordRoutes";
+// import tenantRouter from "./routes/tenantRoutes";
+
 
 const app = express();
 
@@ -16,6 +20,12 @@ app.use(helmet());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+
+
+app.use("/auth", authRouter);
+// app.use("/landlord", landlordRouter);
+// app.use("/tenant", tenantRouter);
 
 
 app.get("/", (_req: Request, res: Response) => {

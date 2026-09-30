@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP Verification | Revocube Spaces</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      color: #1f1d1d;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #f40000;
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    p {
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+
+    .otp-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+
+    .otp {
+      display: inline-block;
+      background-color: #1f1d1d;
+      color: #ffffff;
+      padding: 15px 30px;
+      border-radius: 6px;
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: 8px;
+    }
+
+    .note {
+      font-size: 14px;
+      color: #1f1d1d;
+      background: #f8f8f8;
+      border-left: 4px solid #f40000;
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+
+    .footer {
+      margin-top: 25px;
+      font-size: 14px;
+      color: #777777;
+      text-align: center;
+    }
+
+    a {
+      color: #f40000;
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <h1>OTP Verification</h1>
+
+    <p>Hi {{name}},</p>
+
+    <p>
+      Use the One-Time Password (OTP) below to verify your account on
+      <strong>{{orgName}}</strong>.
+    </p>
+
+    <div class="otp-container">
+      <div class="otp">{{otp}}</div>
+    </div>
+
+    <p style="text-align: center;">
+      This OTP is valid for only <strong>10 minutes</strong>.
+    </p>
+
+    <div class="note">
+      <strong>Security Notice:</strong><br>
+      If you did not request this OTP, please ignore this email. Do not share
+      your OTP with anyone, including Revocube Spaces support staff.
+    </div>
+
+    <p>
+      If you have any questions or need assistance, please reach out to our
+      support team at
+      <a href="mailto:support@revocubespaces.com">
+        support@revocubespaces.com
+      </a>.
+    </p>
+
+    <div class="footer">
+      <p>
+        Cheers,<br>
+        <strong>Revocube Spaces</strong>
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
+

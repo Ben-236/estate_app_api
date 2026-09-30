@@ -13,108 +13,70 @@ import env from "../config/env";
 import path from "path";
 import { sendEmail } from "../services/emailService";
 
-export const registerProfile = use(async (req: Request, res: Response) => {
-  const { fullName, phoneNumber, homeAddress, occupation, password } = req.body;
 
-  const hashedPassword = await bcrypt.hash(password, 12);
-
-  const result = await landlordPrisma.user.create({
-    data: {
-      fullName,
-      phoneNumber,
-      homeAddress,
-      occupation,
-      password: hashedPassword,
-      profileImage: req.file?.path,
-    },
-  });
-
-  res.status(codes.created).json({
-    success: true,
-    message: "Profile created successfully",
-    data: {
-      userId: result.id,
-      fullName: result.fullName,
-      phoneNumber: result.phoneNumber,
-      homeAddress: result.homeAddress,
-      occupation: result.occupation,
-      profileImage: result.profileImage,
-    },
-  });
-
-  return;
-});
 
 export const registerEmail = use(async (req: Request, res: Response) => {
-  const { userId, email } = req.body;
+  const { email } = req.body;
 
-  const user = await landlordPrisma.user.findUnique({
-    where: {
-      id: userId,
-    },
-  });
-
-  if (!user) {
-    throw new ErrorWithCode("User not found", codes.notFound);
-  }
-
-  if (user.isVerified) {
-    throw new ErrorWithCode("User email is already verified", codes.badRequest);
-  }
-
-  const existingEmail = await landlordPrisma.user.findUnique({
+  const existingUser = await landlordPrisma.user.findUnique({
     where: {
       email,
     },
   });
 
-  if (existingEmail && existingEmail.id !== userId) {
-    throw new ErrorWithCode("Email is already registered", codes.conflict);
+  if (existingUser) {
+    throw new ErrorWithCode(
+      "Email is already registered",
+      codes.conflict,
+    );
   }
 
-  // Generate OTP
   const otp = generateSecureRandomString(6);
-
-  // Hash OTP before storing it
   const otpHash = await bcrypt.hash(otp, 10);
-
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-  // Update email and create verification record together
-  await landlordPrisma.$transaction(async (tx) => {
-    await tx.user.update({
+  const existingRegistration =
+    await landlordPrisma.registration.findUnique({
       where: {
-        id: userId,
-      },
-      data: {
         email,
       },
     });
 
-    await tx.emailVerification.create({
+  if (existingRegistration) {
+    await landlordPrisma.registration.update({
+      where: {
+        id: existingRegistration.id,
+      },
       data: {
-        userId,
+        otpHash,
+        expiresAt,
+        verifiedAt: null,
+      },
+    });
+  } else {
+    await landlordPrisma.registration.create({
+      data: {
+        email,
         otpHash,
         expiresAt,
       },
     });
-  });
+  }
 
-  // Load OTP email template
   const templatePath = path.resolve(
     process.cwd(),
     "templates",
     "otpVerification.html",
   );
 
-  const htmlTemplate = await fs.promises.readFile(templatePath, "utf8");
+  const htmlTemplate = await fs.promises.readFile(
+    templatePath,
+    "utf8",
+  );
 
-  // Replace template variables
   const html = htmlTemplate
-    .replace("{{name}}", user.fullName)
     .replace("{{otp}}", otp);
 
-  // Send OTP email
   await sendEmail({
     to: email,
     subject: "Email Verification OTP",
@@ -130,29 +92,29 @@ export const registerEmail = use(async (req: Request, res: Response) => {
 });
 
 export const verifyEmail = use(async (req: Request, res: Response) => {
-  const { userId, otp } = req.body;
+  const { email, otp } = req.body;
 
-  const verification = await landlordPrisma.emailVerification.findFirst({
+  const registration = await landlordPrisma.registration.findUnique({
     where: {
-      userId,
-      verifiedAt: null,
-      expiresAt: {
-        gt: new Date(),
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
+      email,
     },
   });
 
-  if (!verification) {
+  if (
+    !registration ||
+    registration.verifiedAt ||
+    registration.expiresAt <= new Date()
+  ) {
     throw new ErrorWithCode(
       "Invalid or expired verification code",
       codes.badRequest,
     );
   }
 
-  const isValidOtp = await bcrypt.compare(otp, verification.otpHash);
+  const isValidOtp = await bcrypt.compare(
+    otp,
+    registration.otpHash,
+  );
 
   if (!isValidOtp) {
     throw new ErrorWithCode(
@@ -161,29 +123,96 @@ export const verifyEmail = use(async (req: Request, res: Response) => {
     );
   }
 
-  await landlordPrisma.$transaction([
-    landlordPrisma.emailVerification.update({
-      where: {
-        id: verification.id,
-      },
-      data: {
-        verifiedAt: new Date(),
-      },
-    }),
-
-    landlordPrisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        isVerified: true,
-      },
-    }),
-  ]);
+  await landlordPrisma.registration.update({
+    where: {
+      id: registration.id,
+    },
+    data: {
+      verifiedAt: new Date(),
+    },
+  });
 
   res.status(codes.success).json({
     success: true,
     message: "Email verified successfully",
+  });
+
+  return;
+});
+
+export const registerProfile = use(async (
+  req: Request,
+  res: Response,
+) => {
+  const {
+    registrationId,
+    fullName,
+    phoneNumber,
+    homeAddress,
+    occupation,
+    password,
+  } = req.body;
+
+  const registration =
+    await landlordPrisma.registration.findUnique({
+      where: {
+        id: registrationId,
+      },
+    });
+
+  if (!registration || !registration.verifiedAt) {
+    throw new ErrorWithCode(
+      "Please verify your email before completing registration",
+      codes.badRequest,
+    );
+  }
+
+  const existingUser = await landlordPrisma.user.findUnique({
+    where: {
+      email: registration.email,
+    },
+  });
+
+  if (existingUser) {
+    throw new ErrorWithCode(
+      "Email is already registered",
+      codes.conflict,
+    );
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  const result = await landlordPrisma.user.create({
+    data: {
+      fullName,
+      email: registration.email,
+      phoneNumber,
+      homeAddress,
+      occupation,
+      password: hashedPassword,
+      profileImage: req.file?.path,
+      isVerified: true,
+    },
+  });
+
+  await landlordPrisma.registration.delete({
+    where: {
+      id: registration.id,
+    },
+  });
+
+  res.status(codes.created).json({
+    success: true,
+    message: "Profile created successfully",
+    data: {
+      userId: result.id,
+      fullName: result.fullName,
+      email: result.email,
+      phoneNumber: result.phoneNumber,
+      homeAddress: result.homeAddress,
+      occupation: result.occupation,
+      profileImage: result.profileImage,
+    },
   });
 
   return;
