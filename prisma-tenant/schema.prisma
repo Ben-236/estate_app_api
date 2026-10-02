@@ -8,7 +8,6 @@ datasource db {
 }
 
 
-
 model Guest {
   id          String  @id @default(uuid())
   fullName    String
@@ -36,7 +35,7 @@ model Staff {
   email       String? @unique
   phoneNumber String? @unique
 
-  numberOfVisitor Int?
+  numberOfVisitors Int?
   description     String?
 
   checkInDate  DateTime?
