@@ -7,6 +7,158 @@ datasource db {
   provider = "mysql"
 }
 
+model User {
+  id           String  @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String? @unique
+  phoneNumber  String? @unique
+  password     String
+  profileImage String?
+  occupation   String?
+  homeAddress  String?
+  roleId       String?
+
+  isVerified Boolean @default(false)
+  isActive   Boolean @default(true)
+  isDeleted  Boolean @default(false)
+
+  memberships    EstateMembership[]
+  joinRequests   EstateJoinRequest[]
+  passwordResets UserPasswordReset[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+}
+
+model Role {
+  id          String  @id @default(uuid())
+  name        String
+  permissions Json
+  isDeleted   Boolean @default(false)
+
+  user User[]
+}
+
+model UserPasswordReset {
+  id         String   @id @default(uuid())
+  userId     String
+  expiresAt  DateTime
+  resetToken String
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Registration {
+  id         String    @id @default(uuid())
+  email      String    @unique
+  otpHash    String
+  expiresAt  DateTime
+  verifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Maintainer {
+  id             String         @id @default(uuid())
+  firstName      String
+  lastName       String
+  email          String
+  phoneNumber    String
+  password       String
+  property       String
+  maintainerType maintainerType
+  profileImage   String?
+
+  maintenance MaintenanceRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Invoice {
+  id String @id @default(uuid())
+}
+
+model Security {
+}
+
+model MaintenanceRequest {
+  id              String               @id @default(uuid())
+  propertyId      String
+  unitId          String
+  requestDate     String
+  issue_type      MaintenanceIssueType
+  maintainerId    String
+  status          MaintenanceStatus
+  issueAttachment String?
+  note            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Property {
+  id             String       @id @default(uuid())
+  propertyType   propertyType
+  nameOfProperty String
+  country        String
+  state          String
+  city           String
+  zipCode        Int
+  thumbnailImage String
+  description    String?
+
+  propertyImage String
+  maintenance   MaintenanceRequest[]
+  units         Unit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Unit {
+  id                    String      @id @default(uuid())
+  name                  String
+  propertyId            String
+  bedroom               String
+  kitchen               Int
+  bath                  Int
+  rent_type             RentType
+  rentDuration          Int?
+  deposit_type          DepositType
+  depositAmount         Int?
+  lateFeeType           LateFeeType
+  lateFeeAmount         Int?
+  incidentReceiptAmount Int?
+  notes                 String?
+
+  maintenance MaintenanceRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MaintenanceStatus {
+  IN_PROGRESS
+  PENDING
+  COMPLETED
+}
+
+enum RentType {
+}
+
+enum DepositType {
+}
+
+enum LateFeeType {
+}
 
 model Guest {
   id          String  @id @default(uuid())
@@ -36,7 +188,7 @@ model Staff {
   phoneNumber String? @unique
 
   numberOfVisitors Int?
-  description     String?
+  description      String?
 
   checkInDate  DateTime?
   checkOutDate DateTime?
@@ -51,22 +203,22 @@ model Staff {
   updatedAt DateTime @updatedAt
 }
 
-model RepairRequest {
-id          String  @id @default(uuid())
-requestDate DateTime?
-issueType    RepairIssueType    
-maintainer   String? 
-status       RepairRequestStatus @default(PENDING)
-
-issueDocument String?
-notes         String?
-
-
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-
+enum MaintenanceIssueType {
 }
 
+model RepairRequest {
+  id          String              @id @default(uuid())
+  requestDate DateTime?
+  issueType   RepairIssueType
+  maintainer  String?
+  status      RepairRequestStatus @default(PENDING)
+
+  issueDocument String?
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
 enum RepairRequestStatus {
   PENDING
@@ -79,4 +231,13 @@ enum RepairIssueType {
   CLEANING
   REPAIR
   OTHER
+}
+
+enum maintainerType {
+  PLUMBER
+  ELECTRICITY
+  CLEANING
+}
+
+enum propertyType {
 }

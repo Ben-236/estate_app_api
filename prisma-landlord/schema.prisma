@@ -248,17 +248,19 @@ model EmailNotification {
   name        String
   subject     String
   emailStatus emailStatus
-  
-  timestamp   DateTime
-  adminId     String
-  email       String?
-  roleId      String?
+
+  adminId String
+  email   String?
+  roleId  String?
 
   userId String?
-  admin  Admin? @relation(fields: [userId], references: [id])
+  admin  Admin?  @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Settings {
 }
 
 enum emailStatus {
