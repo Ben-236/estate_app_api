@@ -14,11 +14,14 @@ model Estate {
   city                     String
   state                    String
   country                  String
+  estateManagerFirstName   String
+  estateManagerLastName    String
   estateManagerEmail       String
   estatePhoneNumber        String?
   estateManagerPhoneNumber String?
   address                  String
   estateCode               String  @unique
+  roleId                   String
 
   dbName                   String
   dbUrl                    String 
@@ -27,73 +30,13 @@ model Estate {
 
   memberships              EstateMembership[]
   joinRequests             EstateJoinRequest[]
+  subscriptions            Subscription[]
+  transactions             Transaction[]
+  billings                 Billing[]
+  role                     PlatformAdminRole[]
 
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
-  subscriptions            Subscription[]
-
-  transactions             Transaction[]
-  billings                 Billing[]
-}
-
-model Package {
-  id                        String  @id @default(uuid())
-  name                      String  @unique
-  description               String?
-
-  price                     Decimal      @db.Decimal(10, 2)
-  billingCycle              BillingCycle
-
-  isActive                 Boolean @default(true)
-  isDeleted                Boolean @default(false)
-
-  subscriptions            Subscription[]
-  features                 PackageFeature[]
-
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
-}
-
-model PackageFeature {
-  id                        String @id @default(uuid())
-  packageId                 String
-
-  name                      String
-  description               String?
-  value                     Json?
-
-  package                   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
-
-  createdAt                 DateTime @default(now())
-
-  @@index([packageId])
-}
-
-model Subscription {
-  id                        String @id @default(uuid())
-
-  estateId                  String
-  packageId                 String
-
-  status                    SubscriptionStatus @default(PENDING)
-
-  startDate                 DateTime
-  endDate                   DateTime
-
-  amountPaid                Decimal @db.Decimal(10, 2)
-
-  paymentReference          String? @unique
-  gateway                   String?
-
-  estate                    Estate  @relation(fields: [estateId], references: [id])
-  package                   Package @relation(fields: [packageId], references: [id])
-
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt  
-  billings                  Billing[]
-
-  @@index([estateId])
-  @@index([packageId])
 }
 
 model PlatformAdmin {
@@ -115,6 +58,8 @@ model PlatformAdmin {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
+
+  transactions Transaction[]
 }
 
 model PlatformAdminPasswordReset {
@@ -138,25 +83,7 @@ model PlatformAdminRole {
 
 
   Admin           PlatformAdmin[]
-}
-
-model PlatformAuditLog {
-  id              String   @id @default(uuid())
-  action          String
-  timestamp       DateTime
-  ipAddress       String?
-  adminId         String
-  email           String?
-  roleId          String?
-  module          String?
-
-  admin           PlatformAdmin? @relation(fields: [adminId], references: [id])
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([adminId])
-  @@index([createdAt])
+  estate          Estate[]
 }
 
 model MobileUserAccount {
@@ -243,9 +170,71 @@ model EstateJoinRequest {
   @@unique([userId, estateId])
 }
 
+model Package {
+  id                        String  @id @default(uuid())
+  name                      String  @unique
+  description               String?
+
+  price                     Decimal      @db.Decimal(10, 2)
+  billingCycle              BillingCycle
+
+  isActive                  Boolean @default(true)
+  isDeleted                 Boolean @default(false)
+
+  subscriptions             Subscription[]
+  features                  PackageFeature[]
+
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+model PackageFeature {
+  id                        String @id @default(uuid())
+  packageId                 String
+
+  name                      String
+  description               String?
+  value                     Json?
+
+  package                   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  createdAt                 DateTime @default(now())
+
+  @@index([packageId])
+}
+
+model Subscription {
+  id                        String @id @default(uuid())
+
+  estateId                  String
+  packageId                 String
+
+  status                    SubscriptionStatus @default(PENDING)
+
+  startDate                 DateTime
+  endDate                   DateTime
+
+  amountPaid                Decimal @db.Decimal(10, 2)
+
+  paymentReference          String? @unique
+  gateway                   String?
+
+  estate                    Estate  @relation(fields: [estateId], references: [id])
+  package                   Package @relation(fields: [packageId], references: [id])
+  billings                  Billing[]
+
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt  
+  
+
+  @@index([estateId])
+  @@index([packageId])
+}
+
 model Transaction {
   id          String  @id @default(uuid())
   estateId    String?
+  adminId     String?
 
   type        TransactionType
   amount      Decimal         @db.Decimal(10, 2)
@@ -258,6 +247,7 @@ model Transaction {
   metadata    Json?
 
   estate      Estate? @relation(fields: [estateId], references: [id])
+  admin       PlatformAdmin? @relation(fields: [adminId], references: [id])
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -290,6 +280,26 @@ model Billing {
 
   @@index([estateId])
 }
+
+model PlatformAuditLog {
+  id              String   @id @default(uuid())
+  action          String
+  timestamp       DateTime
+  ipAddress       String?
+  adminId         String
+  email           String?
+  roleId          String?
+ 
+
+  admin           PlatformAdmin? @relation(fields: [adminId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([adminId])
+  @@index([createdAt])
+}
+
 
 model EmailTemplate {
   id                String @id @default(uuid())
@@ -326,7 +336,7 @@ enum TransactionStatus {
 enum TransactionType {
   RENT
   UTILITY
-  SUBSCRIPTION
+  SUBSCRIPTION_FEE
   REFUND
   SERVICE_CHARGE
 }
