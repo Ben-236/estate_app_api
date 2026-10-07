@@ -7,164 +7,38 @@ datasource db {
   provider = "mysql"
 }
 
-model User {
-  id           String  @id @default(uuid())
-  firstName    String
-  lastName     String
-  email        String? @unique
-  phoneNumber  String? @unique
-  password     String
-  profileImage String?
+model Member {
+  id           String @id @default(uuid())
+  globalUserId String
+
+  firstName    String?
+  lastName     String?
+  phoneNumber  String?
   occupation   String?
-  homeAddress  String?
-  roleId       String?
+  profileImage String?
 
-  isVerified Boolean @default(false)
-  isActive   Boolean @default(true)
-  isDeleted  Boolean @default(false)
+  status MemberStatus @default(ACTIVE)
 
-  memberships    EstateMembership[]
-  joinRequests   EstateJoinRequest[]
-  passwordResets UserPasswordReset[]
+  roles MemberRole[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  maintenanceRequests    MaintenanceRequest[]
+  propertyOwners         PropertyOwner[]
+  propertyResidents      PropertyResident[]
+  invoices               Invoice[]
+  payments               Payment[]
+  notifications          Notification[]
+  notificationPreference NotificationPreference?
 
-  transactions Transaction[]
-}
-
-model Role {
-  id          String  @id @default(uuid())
-  name        String
-  permissions Json
-  isDeleted   Boolean @default(false)
-
-  user User[]
-}
-
-model UserPasswordReset {
-  id         String   @id @default(uuid())
-  userId     String
-  expiresAt  DateTime
-  resetToken String
-
-  user User @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Registration {
-  id         String    @id @default(uuid())
-  email      String    @unique
-  otpHash    String
-  expiresAt  DateTime
-  verifiedAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Maintainer {
-  id             String         @id @default(uuid())
-  firstName      String
-  lastName       String
-  email          String
-  phoneNumber    String
-  password       String
-  property       String
-  maintainerType maintainerType
-  profileImage   String?
-
-  maintenance MaintenanceRequest[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Invoice {
-  id String @id @default(uuid())
-}
-
-model Security {
-}
-
-model MaintenanceRequest {
-  id              String               @id @default(uuid())
-  propertyId      String
-  unitId          String
-  requestDate     String
-  issue_type      MaintenanceIssueType
-  maintainerId    String
-  status          MaintenanceStatus
-  issueAttachment String?
-  note            String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Property {
-  id             String       @id @default(uuid())
-  propertyType   propertyType
-  nameOfProperty String
-  country        String
-  state          String
-  city           String
-  zipCode        Int
-  thumbnailImage String
-  description    String?
-
-  propertyImage String
-  maintenance   MaintenanceRequest[]
-  units         Unit[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Unit {
-  id                    String      @id @default(uuid())
-  name                  String
-  propertyId            String
-  bedroom               String
-  kitchen               Int
-  bath                  Int
-  rent_type             RentType
-  rentDuration          Int?
-  deposit_type          DepositType
-  depositAmount         Int?
-  lateFeeType           LateFeeType
-  lateFeeAmount         Int?
-  incidentReceiptAmount Int?
-  notes                 String?
-
-  maintenance MaintenanceRequest[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-enum MaintenanceStatus {
-  IN_PROGRESS
-  PENDING
-  COMPLETED
-}
-
-enum RentType {
-}
-
-enum DepositType {
-}
-
-enum LateFeeType {
+  @@unique([globalUserId])
 }
 
 model Guest {
   id          String  @id @default(uuid())
   fullName    String
-  email       String? @unique
-  phoneNumber String  @unique
+  email       String?
+  phoneNumber String
 
   numberOfVisitor Int?
   description     String?
@@ -184,8 +58,8 @@ model Guest {
 model Staff {
   id          String  @id @default(uuid())
   fullName    String
-  email       String? @unique
-  phoneNumber String? @unique
+  email       String?
+  phoneNumber String?
 
   numberOfVisitors Int?
   description      String?
@@ -203,22 +77,297 @@ model Staff {
   updatedAt DateTime @updatedAt
 }
 
-enum MaintenanceIssueType {
-}
+model Role {
+  id          String @id @default(uuid())
+  name        String @unique
+  permissions Json?
 
-model RepairRequest {
-  id          String              @id @default(uuid())
-  requestDate DateTime?
-  issueType   RepairIssueType
-  maintainer  String?
-  status      RepairRequestStatus @default(PENDING)
+  isDeleted Boolean @default(false)
 
-  issueDocument String?
-  notes         String?
+  members MemberRole[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+
+
+model MemberRole {
+  id       String @id @default(uuid())
+  memberId String
+  roleId   String
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([memberId, roleId])
+}
+
+
+model Maintainer {
+  id             String         @id @default(uuid())
+  firstName      String
+  lastName       String
+  email          String
+  phoneNumber    String
+  password       String
+  property       String
+  maintainerType maintainerType
+  profileImage   String?
+
+  maintenance MaintenanceRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Security {
+  id String @id @default(uuid())
+}
+
+model MaintenanceRequest {
+  id String @id @default(uuid())
+
+  propertyId   String?
+  unitId       String?
+  maintainerId String?
+
+  requestedByMemberId String?
+
+  requestDate String
+
+  issue_type MaintenanceIssueType
+  status     MaintenanceStatus
+
+  issueAttachment String?
+  note            String?
+
+  property   Property?   @relation(fields: [propertyId], references: [id])
+  unit       Unit?       @relation(fields: [unitId], references: [id])
+  maintainer Maintainer? @relation(fields: [maintainerId], references: [id])
+
+  requestedBy Member? @relation(fields: [requestedByMemberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Property {
+  id              String @id @default(uuid())
+  name            String
+  propertyType    PropertyType
+
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  zipCode         String?
+
+  description     String?
+  thumbnailImage  String?
+  propertyImage   String?
+
+  units           Unit[]
+
+  owners          PropertyOwner[]
+  residents       PropertyResident[]
+
+  maintenanceRequests MaintenanceRequest[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Unit {
+  id            String @id @default(uuid())
+  propertyId    String
+  name          String
+
+  bedrooms      Int?
+  kitchens      Int?
+  bathrooms     Int?
+
+  rentType      RentType
+
+  rentAmount    Decimal? @db.Decimal(10, 2)
+  rentDuration  Int?
+
+  depositType   DepositType
+  depositAmount Decimal?    @db.Decimal(10, 2)
+
+  lateFeeType   LateFeeType
+  lateFeeAmount Decimal?    @db.Decimal(10, 2)
+
+  incidentReceiptAmount Decimal? @db.Decimal(10, 2)
+
+  notes         String?
+
+  property            Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  maintenanceRequests MaintenanceRequest[]
+  invoices            Invoice[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+}
+
+model RepairRequest {
+  id            String              @id @default(uuid())
+  requestDate   DateTime?
+  issueType     RepairIssueType
+  maintainer    String?
+  status        RepairRequestStatus @default(PENDING)
+
+  issueDocument String?
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Invoice {
+  id            String @id @default(uuid())
+
+  invoiceNumber String @unique
+
+  memberId      String
+  unitId        String?
+
+  type          InvoiceType
+
+  amount        Decimal @db.Decimal(10, 2)
+
+  status        InvoiceStatus @default(PENDING)
+
+  dueDate       DateTime?
+  paidAt        DateTime?
+
+  description   String?
+
+  member        Member @relation(fields: [memberId], references: [id])
+  unit          Unit?  @relation(fields: [unitId], references: [id])
+
+  payments      Payment[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Payment {
+  id            String @id @default(uuid())
+  invoiceId     String
+  memberId      String
+
+  amount        Decimal @db.Decimal(10, 2)
+
+  reference     String  @unique
+  gateway       String?
+
+  status        PaymentStatus @default(PENDING)
+
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id])
+  member        Member  @relation(fields: [memberId], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Notification {
+  id            String @id @default(uuid())
+  memberId      String
+  title         String
+  message       String
+
+  type          NotificationType
+
+  isRead        Boolean   @default(false)
+  readAt        DateTime?
+
+  createdAt     DateTime @default(now())
+
+  member        Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, isRead])
+}
+
+model NotificationPreference {
+  id          String @id @default(uuid())
+  memberId    String @unique
+
+  emailEnabled Boolean @default(true)
+  pushEnabled  Boolean @default(true)
+
+  member      Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EstateRule {
+  id          String @id @default(uuid())
+  title       String
+  description String?
+
+  documentUrl String?
+
+  isActive    Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PropertyOwner {
+  id          String @id @default(uuid())
+  propertyId  String
+  memberId    String
+
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([propertyId, memberId])
+}
+
+model PropertyResident {
+  id          String @id @default(uuid())
+  propertyId  String
+  memberId    String
+
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([propertyId, memberId])
+}
+
+// model RolePermission {
+//   id           String @id @default(uuid())
+//   roleId       String
+//   permissionId String
+
+//   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+//   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+//   createdAt DateTime @default(now())
+
+//   @@unique([roleId, permissionId])
+// }
+
+// model Permission {
+//   id          String  @id @default(uuid())
+//   name        String  @unique
+//   description String?
+
+//   roles RolePermission[]
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
 
 enum RepairRequestStatus {
   PENDING
@@ -237,7 +386,69 @@ enum maintainerType {
   PLUMBER
   ELECTRICITY
   CLEANING
+  OTHER
 }
 
-enum propertyType {
+enum MemberStatus {
+  ACTIVE
+  SUSPENDED
+  LEFT
+}
+
+enum MaintenanceStatus {
+  IN_PROGRESS
+  PENDING
+  COMPLETED
+}
+
+enum NotificationType {
+  EMAIL
+  PUSH
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  FAILED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum MaintenanceIssueType {
+  CLEANING
+  REPAIR
+  OTHER
+}
+
+enum InvoiceType {
+  HOUSE
+  APARTMENT
+  OTHER
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  OTHER
+}
+
+enum RentType {
+  MONTHLY
+  ANNUAL
+  OTHER
+}
+
+enum DepositType {
+  BANK
+  OTHER
+}
+
+enum LateFeeType {
+  PER_DAY
+  PER_MONTH
+  OTHER
 }
